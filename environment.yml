@@ -1,0 +1,6 @@
+name: handball-stats
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - seaborn=0.11.2
