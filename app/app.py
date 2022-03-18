@@ -5,11 +5,14 @@ import seaborn as sns
 import plotly.express as px
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 # --- Setup Streamlit ---
 st.set_page_config(layout="wide")
 
-df_report = pd.read_csv(r"C:\Users\rgrie\PycharmProjects\handball-stats\data\220316_mHSOL_ab.csv", parse_dates=[3], dayfirst=True)
+#df_report = pd.read_csv(r"C:\Users\rgrie\PycharmProjects\handball-stats\data\220316_mHSOL_ab.csv", parse_dates=[3], dayfirst=True)
+
+df_report = pd.read_csv(r"https://raw.githubusercontent.com/therealgriehl/handball-stats/main/data/220316_mHSOL_ab.csv")
 
 all_games = df_report["game_nr"].unique().tolist()
 all_teams = np.unique(df_report[["home", "guest", "team"]].values)
