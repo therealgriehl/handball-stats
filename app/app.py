@@ -5,7 +5,8 @@ import seaborn as sns
 import plotly.express as px
 import matplotlib.pyplot as plt
 import numpy as np
-from pathlib import Path
+from collections import Counter
+
 
 # --- Setup Streamlit ---
 st.set_page_config(layout="wide")
@@ -21,8 +22,27 @@ all_players = df_report["player"].unique().tolist()
 
 st.title("Handball Dashboard")
 
-# --- Teams im Saisonverlauf ---
+# --- Wahl der Liga ---
 
+league = st.selectbox("Auswahl der Liga", ["Liga1", "Liga2"])
+
+# --- Prüfen, ob Spieler mit gleichem Namen ---
+
+pl_do = df_report.groupby(["player", "team"]).any()
+pl_do.reset_index(inplace=True)
+pl_do = pl_do[pl_do["player"] != "timeout"]
+full_players = pl_do["player"].tolist()
+doubles = [key for key in Counter(full_players).keys() if Counter(full_players)[key]>1]
+
+def double_players(row):
+    if row["player"] in doubles:
+        row["player"] = str(row["player"]) + str(row["team"])
+
+df_report.apply(lambda x: double_players(x), axis=1)
+
+# --- Allgemeine Variablen/DataFrames ---
+
+# Punkte im Saisonverlauf
 games_df = df_report.groupby(["game_nr", "team"])["goal"].sum()
 games_df = games_df.reset_index()
 
@@ -58,13 +78,38 @@ points_df = pd.DataFrame(points_list, columns=["game_nr", "game_date", "team", "
 points_df = points_df.sort_values(by="game_date")
 points_df["sum_points+"] = points_df.groupby("team")["points+"].transform(pd.Series.cumsum)
 points_df["sum_points-"] = points_df.groupby("team")["points-"].transform(pd.Series.cumsum)
-
+points_season_df = points_df.groupby("team")[["points+", "points-"]].sum()
+points_season_df.reset_index(inplace=True)
+# Anzahl Spiele je Team
 amount_games = points_df.groupby("team").count()
 amount_games = amount_games.reset_index()
 
 amount_games= amount_games.drop(columns=["game_date", "points+", "points-", "sum_points+", "sum_points-"])
 amount_games.rename(columns={"game_nr":"amount_games"}, inplace=True)
 
+# Erstelle Tabelle
+season_table = amount_games.copy()
+season_table = pd.merge(season_table, points_season_df[["team","points+", "points-"]], how="inner", on="team")
+# Tore pro Team
+teamgoals = df_report.groupby(["team"]).sum().sort_values(by="goal", ascending=False)
+teamgoals = teamgoals.reset_index()
+teamgoals = pd.merge(teamgoals, amount_games, on="team", how="inner")
+
+# --- Tabelle ---
+
+season_table = pd.merge(season_table, teamgoals[["team","goal"]], on="team", how="inner")
+season_table.index = season_table.index + 1
+season_table.rename(columns={"team":"Mannschaft",
+                            "amount_games":"Spiele",
+                             "points+":"Punkte +",
+                             "points-": "Punkte -",
+                             "goal":"Tore"},
+                    inplace=True)
+season_table.sort_values(by="Punkte +", ascending=False, inplace=True)
+st.caption("Tabelle")
+st.table(season_table)
+
+# --- Team Punkte in der Saison ---
 fig_teams = px.line(points_df,
                     x="game_date",
                     y="sum_points+",
@@ -79,17 +124,11 @@ fig_teams.update_yaxes(tick0=0, dtick=2)
 fig_teams.update_layout(legend_title_text='Mannschaften')
 st.plotly_chart(fig_teams, use_container_width=True)
 
+# --- Start der Spalten ---
 
-
-
-
-# --- Tore pro Team ---
-
-teamgoals = df_report.groupby(["team"]).sum().sort_values(by="goal", ascending=False)
-teamgoals = teamgoals.reset_index()
-teamgoals = pd.merge(teamgoals, amount_games, on="team", how="inner")
 left_column, right_column = st.columns(2)
 
+# --- Tore pro Team ---
 fig_tt = px.bar(teamgoals, x="team", y="goal",
                    title="Tore pro Team",
                    labels={
@@ -97,7 +136,7 @@ fig_tt = px.bar(teamgoals, x="team", y="goal",
                        "goal":"Geworfene Tore"
                    })
 fig_tt.update_yaxes(tick0=0, dtick=50)
-left_column.plotly_chart(fig_tt)
+left_column.plotly_chart(fig_tt, use_container_width=True)
 
 # --- Tore pro Spiel - Teams
 
@@ -112,7 +151,7 @@ fig_tt2 = px.bar(teamgoals_sort, x="team", y="goals_pg",
                        "goals_pg":"Tore pro Spiel"
                    })
 fig_tt2.update_yaxes(tick0=0, dtick=10)
-right_column.plotly_chart(fig_tt2)
+right_column.plotly_chart(fig_tt2, use_container_width=True)
 
 # --- 2min pro Team ---
 
@@ -126,7 +165,7 @@ fig_t2 = px.bar(team_2min, x="team", y="2min",
                        "2min":"Zeitstrafen"
                    })
 fig_t2.update_yaxes(tick0=0, dtick=5)
-left_column.plotly_chart(fig_t2)
+left_column.plotly_chart(fig_t2, use_container_width=True)
 
 # --- Prozent in Unterzahl ---
 
@@ -144,13 +183,13 @@ fig_t22 = px.bar(team_2min_sort, x="team", y="percent_2min",
                        "percent_2min":"Zeit in Unterzahl in %"
                    })
 fig_t22.update_yaxes(tick0=0, dtick=10)
-right_column.plotly_chart(fig_t22)
+right_column.plotly_chart(fig_t22, use_container_width=True)
 
 # --- Geworfene Tore ---
 
 player_goals = df_report.groupby("player").sum().sort_values(by="goal", ascending=False)
+player_goals.reset_index(inplace=True)
 top_goals = player_goals.head(10)
-top_goals = top_goals.reset_index()
 top_goals_players = top_goals["player"].values.tolist()
 
 fig_score = px.bar(top_goals, x="player", y="goal",
@@ -160,10 +199,32 @@ fig_score = px.bar(top_goals, x="player", y="goal",
                        "goal":"Geworfene Tore"
                    })
 fig_score.update_yaxes(tick0=0, dtick=5)
-left_column.plotly_chart(fig_score)
+left_column.plotly_chart(fig_score, use_container_width=True)
 
 # --- Tore pro Spiel - Spieler
-right_column.write("Tore pro Spiel - Grafik kommt")
+# ### PRÜFEN, OB SPIELER GESPIELT HAT IN BERICHT ###
+
+tps = df_report.groupby(["player", "team"]).any()
+tps.reset_index(inplace=True)
+tps = pd.merge(player_goals, tps[["player", "team"]], on="player", how="inner")
+tps = pd.merge(tps, amount_games[["team", "amount_games"]], on="team", how="inner")
+tps.sort_values(by="goal", ascending=False, inplace=True)
+
+def goals_per_game(row):
+    return row["goal"]/row["amount_games"]
+tps["goals_per_game"] = tps.apply(lambda x: goals_per_game(x), axis=1)
+tps.sort_values(by="goals_per_game", inplace=True, ascending=False)
+tps_top = tps.head(10)
+
+fig_gpp = px.bar(tps_top, x="player", y="goals_per_game",
+                   title="Tore pro Spiel",
+                   labels={
+                       "player":"Spieler",
+                       "goals_per_game":"Tore pro Spiel"
+                   })
+fig_gpp.update_yaxes(tick0=0, dtick=2)
+right_column.plotly_chart(fig_gpp, use_container_width=True)
+
 
 # --- Geworfene Tore in der Saison ---
 
