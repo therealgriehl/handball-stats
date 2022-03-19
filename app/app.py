@@ -160,10 +160,10 @@ fig_score = px.bar(top_goals, x="player", y="goal",
                        "goal":"Geworfene Tore"
                    })
 fig_score.update_yaxes(tick0=0, dtick=5)
-st.plotly_chart(fig_score)
+left_column.plotly_chart(fig_score)
 
 # --- Tore pro Spiel - Spieler
-right_column.subheader("Prüfe, wann Spieler gespielt")
+right_column.write("Tore pro Spiel - Grafik kommt")
 
 # --- Geworfene Tore in der Saison ---
 
@@ -213,13 +213,15 @@ st.plotly_chart(fig_pc, use_container_width=True)
 
 
 # --- Ende der Website ---
-
 st.caption(
     " Vielen Dank für den Besuch!"
 )
 
-st.write(
-             """
+
+imp = st.checkbox("Impressum")
+if imp:
+    st.write(
+        """
 **Impressum**
 Angaben gemäß § 5 TMG
 
@@ -267,8 +269,11 @@ Diese Website benutzt Google Adsense, einen Webanzeigendienst der Google Inc., U
 
 Impressum vom Impressum Generator der Kanzlei Hasselbach, Frankfurt
 
-             
-             """)
+
+        """)
+
+
+
 
 
 
