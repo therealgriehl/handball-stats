@@ -6,6 +6,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
+import time
 
 
 # --- Setup Streamlit ---
@@ -123,6 +124,7 @@ fig_teams = px.line(points_df,
 fig_teams.update_yaxes(tick0=0, dtick=2)
 fig_teams.update_layout(legend_title_text='Mannschaften')
 st.plotly_chart(fig_teams, use_container_width=True)
+
 
 # --- Start der Spalten ---
 
@@ -270,7 +272,10 @@ fig_pc.update_yaxes(tick0=0, dtick=5)
 fig_pc.update_layout(legend_title_text='Spieler')
 st.plotly_chart(fig_pc, use_container_width=True)
 
-
+cd 
+single = date_index[date_index["player"]==option_player1]
+single = single[["game_date", "sum_goals"]]
+single
 
 
 # --- Ende der Website ---
@@ -332,10 +337,6 @@ Impressum vom Impressum Generator der Kanzlei Hasselbach, Frankfurt
 
 
         """)
-
-
-
-
 
 
 
